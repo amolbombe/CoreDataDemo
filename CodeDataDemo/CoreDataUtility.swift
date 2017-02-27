@@ -25,7 +25,7 @@ class CoreDataUtility {
             appDelegate.persistentContainer.viewContext
         
         let fetchRequest =
-            NSFetchRequest<NSManagedObject>(entityName: "Person")
+            NSFetchRequest<NSManagedObject>(entityName: entityName)
         
         do {
             let data = try managedContext.fetch(fetchRequest)
@@ -46,11 +46,13 @@ class CoreDataUtility {
         
         let managedContext = appDelegate.persistentContainer.viewContext
         
-        let entity = NSEntityDescription.entity(forEntityName: entityName, in: managedContext)
+        guard let entity = NSEntityDescription.entity(forEntityName: entityName, in: managedContext) else {
+            return
+        }
         
-        let person = NSManagedObject(entity: entity!, insertInto: managedContext)
+        let entityData = NSManagedObject(entity: entity, insertInto: managedContext)
         for value in values {
-        person.setValue(value.value, forKey: value.key)
+        entityData.setValue(value.value, forKey: value.key)
         }
         
         do {
@@ -60,7 +62,7 @@ class CoreDataUtility {
         }
     }
     
-    class func deleteData(data: NSManagedObject) ->Bool {
+    class func deleteData(data: NSManagedObject) -> Bool {
         
         // Delete Data
         

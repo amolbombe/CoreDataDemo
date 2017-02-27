@@ -43,8 +43,15 @@ class ViewController: UIViewController {
         
         let cancelAction = UIAlertAction(title: "Cancel", style: .default, handler: nil)
         
-        alert.addTextField()
-        alert.addTextField()
+        alert.addTextField(configurationHandler: {
+        (textfield) in
+            textfield.placeholder = "name"
+        })
+        alert.addTextField(configurationHandler: {
+            (textfield) in
+            textfield.placeholder = "age"
+            textfield.keyboardType = .numberPad
+        })
         
         alert.addAction(saveAction)
         alert.addAction(cancelAction)
