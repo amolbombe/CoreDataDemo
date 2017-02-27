@@ -18,26 +18,10 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         
         self.title = "The Name List"
-        
-        // Fetch Data
-        
-        guard let appDelegate =
-            UIApplication.shared.delegate as? AppDelegate else {
-                return
-        }
-        
-        let managedContext =
-            appDelegate.persistentContainer.viewContext
-        
-        let fetchRequest =
-            NSFetchRequest<NSManagedObject>(entityName: "Person")
-        
-        do {
-            peoples = try managedContext.fetch(fetchRequest)
-        } catch let error as NSError {
-            print("Could not fetch. \(error), \(error.userInfo)")
-        }
-        
+        self.automaticallyAdjustsScrollViewInsets = false
+        self.fetch()
+        tableView.estimatedRowHeight = 44
+        tableView.rowHeight = UITableViewAutomaticDimension
         self.tableView.dataSource = self
         self.tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
     }
@@ -47,15 +31,19 @@ class ViewController: UIViewController {
         let alert = UIAlertController(title: "New Name", message: "Add New Name", preferredStyle: .alert)
         let saveAction = UIAlertAction(title: "Save", style: .default, handler: {
             [unowned self] action in
-            guard let textField = alert.textFields?.first, let nameToSave = textField.text else {
+            guard let nameTextField = alert.textFields?.first, let nameToSave = nameTextField.text else {
                 return
             }
-            self.save(name: nameToSave)
-            self.tableView.reloadData()
+            guard let ageTextField = alert.textFields?.last, let ageToSave = ageTextField.text else {
+                return
+            }
+            self.save(name: nameToSave, age: Int(ageToSave))
+            self.fetch()
         })
         
         let cancelAction = UIAlertAction(title: "Cancel", style: .default, handler: nil)
         
+        alert.addTextField()
         alert.addTextField()
         
         alert.addAction(saveAction)
@@ -64,27 +52,16 @@ class ViewController: UIViewController {
         self.present(alert, animated: true)
     }
     
-    func save(name: String) {
-        
-        // Insert Data
-        
-        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
-            return
-        }
-        
-        let managedContext = appDelegate.persistentContainer.viewContext
-        
-        let entity = NSEntityDescription.entity(forEntityName: "Person", in: managedContext)
-        
-        let person = NSManagedObject(entity: entity!, insertInto: managedContext)
-        
-        person.setValue(name, forKey: "name")
-        
-        do {
-            try managedContext.save()
-            peoples.append(person)
-        } catch let error as NSError {
-            print("Could not save \(error)")
+    func save(name: String?, age: Int?) {
+        let dataDictionary:[String: Any?] = ["name": name,
+                              "age": age]
+        CoreDataUtility.insertData(values: dataDictionary, entityName: "Person")
+    }
+    
+    func fetch() {
+        if let data = CoreDataUtility.fetchData(entityName: "Person") {
+            peoples = data
+            self.tableView.reloadData()
         }
     }
 }
@@ -95,28 +72,23 @@ extension ViewController: UITableViewDataSource {
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
+        var cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as UITableViewCell
+        cell = UITableViewCell(style: .subtitle, reuseIdentifier: "Cell")
         let people = peoples[indexPath.row]
+        cell.textLabel?.numberOfLines = 0
         cell.textLabel?.text = people.value(forKeyPath: "name") as? String
+        if let age = people.value(forKeyPath: "age") as? Int {
+            cell.detailTextLabel?.text = String(age)
+        }
         return cell
     }
     
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
         switch editingStyle {
         case .delete:
-            
-            // Delete Data
-            
-            guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
-                return
-            }
-            let managedContext = appDelegate.persistentContainer.viewContext
-            managedContext.delete(peoples[indexPath.row])
-            do {
-                try managedContext.save()
+            let isDataDeleted = CoreDataUtility.deleteData(data: peoples[indexPath.row])
+            if isDataDeleted {
                 peoples.remove(at: indexPath.row)
-            } catch let error as NSError {
-                print("Could not save \(error)")
             }
             tableView.deleteRows(at: [indexPath], with: .fade)
             break
